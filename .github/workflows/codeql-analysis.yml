@@ -2,17 +2,18 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ "3.2.7" ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ "3.2.7" ]
+    # The branches below must be a subset of the branches above
+    branches: [ main, master ]
   schedule:
-    - cron: '0 1 * * 0'  # weekly scan
-  workflow_dispatch:
+    - cron: '0 0 * * 0' # weekly
 
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+
     permissions:
       actions: read
       contents: read
@@ -32,18 +33,23 @@ jobs:
       with:
         languages: ${{ matrix.language }}
 
-    - name: Build project
-      run: |
-        ./mvnw clean install -DskipTests=true
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Build with Maven
+      run: mvn -B package --file pom.xml
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
-        output: codeql-report.sarif
+        category: '/language:${{ matrix.language }}'
+        output: codeql-results.sarif
 
-    - name: Upload SARIF Report as Artifact
+    - name: Upload SARIF report
       uses: actions/upload-artifact@v4
       with:
-        name: codeql-report
-        path: codeql-report.sarif
-
+        name: codeql-results
+        path: codeql-results.sarif
